@@ -4,7 +4,7 @@ import random
 
 MAX_DOWN_VELOCITY = -2
 IMPULSE_VELOCITY = 3
-IMPULSE_ACCELERATION = 4
+IMPULSE_ACCELERATION = 5
 
 class Frame:
 
@@ -34,7 +34,7 @@ class Frame:
 
         self.pipes = [(x-1, y) for (x, y) in self.pipes if x + self._pipe_width > 0]
         if self.pipes[-1][0] < self.width - self._pipe_distance:
-            self.pipes.append((self.width, random.randint(50, self.height - 50)))
+            self.pipes.append((self.width, random.randint(150, self.height - 150)))
 
     def impulse(self):
         self.bird_velocity = IMPULSE_VELOCITY
@@ -43,14 +43,19 @@ class Frame:
     def has_impact(self):
         return False
 
+    def _trans(self, x, y):
+        return x, self.height - y
+
     def paint(self, screen):
-        screen.blit(self._bird_sprite, (200, self.height - self.bird_altitude - self._bird_sprite_rect.height))
+        screen.blit(self._bird_sprite, self._trans(200, self.bird_altitude + self._bird_sprite_rect.height))
 
         for pipe in self.pipes:
             screen.fill(self._pipe_color,
-                        pygame.Rect(pipe[0], self.height - pipe[1], self._pipe_width, self.height - pipe[1]))
+                        pygame.Rect(self._trans(pipe[0], pipe[1]),
+                                    (self._pipe_width, pipe[1])))
             screen.fill(self._pipe_color,
-                        pygame.Rect(pipe[0], 0, self._pipe_width, self.height - pipe[1] - self._gap_height))
+                        pygame.Rect(self._trans(pipe[0], self.height),
+                                    (self._pipe_width, self.height - pipe[1] - self._gap_height)))
 
 
 def main():
@@ -66,11 +71,10 @@ def main():
     while 1:
         # handle events
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 sys.exit()
             if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                 frame.impulse()
-
 
         # step simulation
         frame.tick()
