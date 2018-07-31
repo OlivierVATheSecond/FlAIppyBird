@@ -2,20 +2,22 @@ import sys
 import pygame
 import random
 
-MAX_DOWN_VELOCITY = -2
-IMPULSE_VELOCITY = 3
-IMPULSE_ACCELERATION = 5
+MAX_UP_VELOCITY = 3.0
+MAX_DOWN_VELOCITY = -3.0
+MIN_PIPE_SIZE = 250
+ACCELERATION = 0.15
+
 
 class Frame:
 
     def __init__(self, width=1000, height=500,
                  bird_altitude=None, bird_velocity=0,
-                 pipe_width=70, gap_height=250, pipe_distance=500):
+                 pipe_width=100, gap_height=250, pipe_distance=600):
         self.width = width
         self.height = height
         self.bird_altitude = height / 2 if bird_altitude is None else bird_altitude
         self.bird_velocity = bird_velocity
-        self.bird_acceleration = -1
+        self.impulse_ticks = 0
 
         self._pipe_width = pipe_width
         self._gap_height = gap_height
@@ -28,17 +30,28 @@ class Frame:
         self._pipe_color = 255, 255, 255
 
     def tick(self):
+        print(self.bird_altitude, self.bird_velocity, self.impulse_ticks)
         self.bird_altitude = max(self.bird_altitude + self.bird_velocity, 0)
-        self.bird_velocity = max(self.bird_velocity + self.bird_acceleration, MAX_DOWN_VELOCITY)
-        self.bird_acceleration = max(self.bird_acceleration - 1, -1)
+        if self.bird_altitude == 0:
+            self.bird_velocity = 0
+
+        self.bird_velocity = min(
+            MAX_UP_VELOCITY,
+            max(
+                MAX_DOWN_VELOCITY,
+                self.bird_velocity + ACCELERATION if self.impulse_ticks > 0 else self.bird_velocity - ACCELERATION
+            )
+        )
+        self.impulse_ticks = self.impulse_ticks - 1 if self.impulse_ticks > 0 else 0
 
         self.pipes = [(x-1, y) for (x, y) in self.pipes if x + self._pipe_width > 0]
         if self.pipes[-1][0] < self.width - self._pipe_distance:
-            self.pipes.append((self.width, random.randint(150, self.height - 150)))
+            self.pipes.append(
+                (self.width, random.randint(MIN_PIPE_SIZE, self.height - MIN_PIPE_SIZE - self._gap_height))
+            )
 
     def impulse(self):
-        self.bird_velocity = IMPULSE_VELOCITY
-        self.bird_acceleration = IMPULSE_ACCELERATION
+        self.impulse_ticks = 50
 
     def has_impact(self):
         return False
