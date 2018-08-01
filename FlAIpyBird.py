@@ -2,6 +2,7 @@ import sys
 import pygame
 import random
 
+BIRD_LEFT = 200
 MAX_UP_VELOCITY = 3.0
 MAX_DOWN_VELOCITY = -3.0
 MIN_PIPE_SIZE = 250
@@ -27,10 +28,10 @@ class Frame:
 
         self._bird_sprite = pygame.image.load("Sprites/Bird.bmp")
         self._bird_sprite_rect = self._bird_sprite.get_rect()
-        self._pipe_color = 255, 255, 255
+
+        self._pipe_sprite = pygame.image.load("Sprites/Pipe_Upper_Desing2.bmp")
 
     def tick(self):
-        print(self.bird_altitude, self.bird_velocity, self.impulse_ticks)
         self.bird_altitude = max(self.bird_altitude + self.bird_velocity, 0)
         if self.bird_altitude == 0:
             self.bird_velocity = 0
@@ -50,25 +51,43 @@ class Frame:
                 (self.width, random.randint(MIN_PIPE_SIZE, self.height - MIN_PIPE_SIZE - self._gap_height))
             )
 
+    def collides(self):
+        if self.bird_altitude <= 0:
+            return True
+
+        bird_rect = pygame.Rect(BIRD_LEFT, self.bird_altitude + self._bird_sprite_rect.height,
+                                self._bird_sprite_rect.width, self._bird_sprite_rect.height)
+        pipe = self.pipes[0]
+        
+
     def impulse(self):
         self.impulse_ticks = 50
-
-    def has_impact(self):
-        return False
 
     def _trans(self, x, y):
         return x, self.height - y
 
+    def _trans_rect(self, rect):
+        return pygame.Rect(
+            (self._trans(rect.left, rect.top)),
+            (rect.width, rect.height)
+        )
+
+    def _lower_pipe(self, pipe):
+        return pygame.Rect(pipe[0], pipe[1], self._pipe_width, pipe[1])
+
+    def _upper_pipe(self, pipe):
+        return pygame.Rect(pipe[0], self.height, self._pipe_width, self.height - pipe[1] - self._gap_height)
+
+    def _paint_pipe(self, screen, sprite, pipe_rect):
+        screen.blit(sprite, dest=self._trans(pipe_rect.left, pipe_rect.top),
+                    area=pygame.Rect(0, 0, pipe_rect.width, pipe_rect.height))
+
     def paint(self, screen):
-        screen.blit(self._bird_sprite, self._trans(200, self.bird_altitude + self._bird_sprite_rect.height))
+        screen.blit(self._bird_sprite, self._trans(BIRD_LEFT, self.bird_altitude + self._bird_sprite_rect.height))
 
         for pipe in self.pipes:
-            screen.fill(self._pipe_color,
-                        pygame.Rect(self._trans(pipe[0], pipe[1]),
-                                    (self._pipe_width, pipe[1])))
-            screen.fill(self._pipe_color,
-                        pygame.Rect(self._trans(pipe[0], self.height),
-                                    (self._pipe_width, self.height - pipe[1] - self._gap_height)))
+            self._paint_pipe(screen, self._pipe_sprite, self._lower_pipe(pipe))
+            self._paint_pipe(screen, self._pipe_sprite, self._upper_pipe(pipe))
 
 
 def main():
