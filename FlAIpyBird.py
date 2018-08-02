@@ -24,12 +24,15 @@ class Frame:
         self._gap_height = gap_height
         self._pipe_distance = pipe_distance
 
-        self.pipes = [(width + 10, 50)]
+        self.pipes = [self._create_pipe()]
 
         self._bird_sprite = pygame.image.load("Sprites/Bird.bmp")
         self._bird_sprite_rect = self._bird_sprite.get_rect()
 
         self._pipe_sprite = pygame.image.load("Sprites/Pipe_Upper_Desing2.bmp")
+
+    def _create_pipe(self):
+        return self.width, random.randint(MIN_PIPE_SIZE, self.height - MIN_PIPE_SIZE - self._gap_height)
 
     def tick(self):
         self.bird_altitude = max(self.bird_altitude + self.bird_velocity, 0)
@@ -47,30 +50,30 @@ class Frame:
 
         self.pipes = [(x-1, y) for (x, y) in self.pipes if x + self._pipe_width > 0]
         if self.pipes[-1][0] < self.width - self._pipe_distance:
-            self.pipes.append(
-                (self.width, random.randint(MIN_PIPE_SIZE, self.height - MIN_PIPE_SIZE - self._gap_height))
-            )
+            self.pipes.append(self._create_pipe())
+
+        if self.collides():
+            pygame.event.post(pygame.event.Event(pygame.USEREVENT, collision=True))
 
     def collides(self):
-        if self.bird_altitude <= 0:
-            return True
+        # if self.bird_altitude <= 0:
+        #     return True
 
         bird_rect = pygame.Rect(BIRD_LEFT, self.bird_altitude + self._bird_sprite_rect.height,
                                 self._bird_sprite_rect.width, self._bird_sprite_rect.height)
-        pipe = self.pipes[0]
-        
+
+        for pipe in self.pipes:
+            pipe_rect = self._upper_pipe(pipe)
+            if bird_rect.colliderect(pipe_rect): #or bird_rect.colliderect(self._upper_pipe(pipe)):
+                return True
+
+        return False
 
     def impulse(self):
         self.impulse_ticks = 50
 
     def _trans(self, x, y):
         return x, self.height - y
-
-    def _trans_rect(self, rect):
-        return pygame.Rect(
-            (self._trans(rect.left, rect.top)),
-            (rect.width, rect.height)
-        )
 
     def _lower_pipe(self, pipe):
         return pygame.Rect(pipe[0], pipe[1], self._pipe_width, pipe[1])
@@ -79,11 +82,17 @@ class Frame:
         return pygame.Rect(pipe[0], self.height, self._pipe_width, self.height - pipe[1] - self._gap_height)
 
     def _paint_pipe(self, screen, sprite, pipe_rect):
-        screen.blit(sprite, dest=self._trans(pipe_rect.left, pipe_rect.top),
+        screen.blit(sprite,
+                    dest=(pipe_rect.left, self.height - pipe_rect.top),
                     area=pygame.Rect(0, 0, pipe_rect.width, pipe_rect.height))
 
+        screen.fill((255, 255, 255, 50), pygame.Rect(pipe_rect.left, self.height - pipe_rect.top, pipe_rect.width, pipe_rect.height))
+
     def paint(self, screen):
-        screen.blit(self._bird_sprite, self._trans(BIRD_LEFT, self.bird_altitude + self._bird_sprite_rect.height))
+        screen.blit(self._bird_sprite, dest=(BIRD_LEFT, self.height - self.bird_altitude - self._bird_sprite_rect.height))
+        # bird_rect = pygame.Rect(BIRD_LEFT, self.bird_altitude,
+        #                         self._bird_sprite_rect.width, self._bird_sprite_rect.height)
+        # screen.fill((255, 155, 155), pygame.Rect(bird_rect.left, self.height - bird_rect.top, bird_rect.width, bird_rect .height))
 
         for pipe in self.pipes:
             self._paint_pipe(screen, self._pipe_sprite, self._lower_pipe(pipe))
@@ -107,6 +116,9 @@ def main():
                 sys.exit()
             if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                 frame.impulse()
+            if event.type == pygame.USEREVENT and event.collision:
+                print("oops...")
+                sys.exit()
 
         # step simulation
         frame.tick()
