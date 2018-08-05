@@ -6,6 +6,7 @@ MAX_UP_VELOCITY = 3.0
 MAX_DOWN_VELOCITY = -3.0
 MIN_PIPE_SIZE = 250
 ACCELERATION = 0.15
+IMPULSE_DURATION = 50
 
 
 class Frame:
@@ -33,6 +34,14 @@ class Frame:
 
     def _create_pipe(self):
         return self.width, random.randint(MIN_PIPE_SIZE + self._gap_height, self.height - MIN_PIPE_SIZE)
+
+    def _next_pipe(self):
+        for pipe in self.pipes:
+            if pipe[0] + self._pipe_width > BIRD_LEFT + self._bird_sprite_rect.width:
+                return pipe
+
+        print("no more pipes...")
+        return None
 
     def bird_rect(self):
         return pygame.Rect(BIRD_LEFT, self.bird_altitude,
@@ -74,7 +83,7 @@ class Frame:
         return 0
 
     def impulse(self):
-        self.impulse_ticks = 50
+        self.impulse_ticks = IMPULSE_DURATION
 
     def _lower_pipe(self, pipe):
         return pygame.Rect(pipe[0], pipe[1], self._pipe_width, self.height - pipe[1])
@@ -82,16 +91,19 @@ class Frame:
     def _upper_pipe(self, pipe):
         return pygame.Rect(pipe[0], 0, self._pipe_width, pipe[1] - self._gap_height)
 
-    def _paint_pipe(self, screen, sprite, pipe_rect):
-        screen.blit(sprite,
+    def _paint_bird(self, screen):
+        screen.blit(self._bird_sprite, dest=(BIRD_LEFT, self.bird_altitude))
+
+    def _paint_pipe(self, screen, pipe_rect):
+        screen.blit(self._pipe_sprite,
                     dest=(pipe_rect.left, pipe_rect.top),
                     area=pygame.Rect(0, 0, pipe_rect.width, pipe_rect.height))
 
         # screen.fill((255, 255, 255, 50), pygame.Rect(pipe_rect.left, pipe_rect.top, pipe_rect.width, pipe_rect.height))
 
     def paint(self, screen):
-        screen.blit(self._bird_sprite, dest=(BIRD_LEFT, self.bird_altitude))
+        self._paint_bird(screen)
 
         for pipe in self.pipes:
-            self._paint_pipe(screen, self._pipe_sprite, self._lower_pipe(pipe))
-            self._paint_pipe(screen, self._pipe_sprite, self._upper_pipe(pipe))
+            self._paint_pipe(screen, self._lower_pipe(pipe))
+            self._paint_pipe(screen, self._upper_pipe(pipe))
