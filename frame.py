@@ -35,9 +35,9 @@ class Frame:
     def _create_pipe(self):
         return self.width, random.randint(MIN_PIPE_SIZE + self._gap_height, self.height - MIN_PIPE_SIZE)
 
-    def _next_pipe(self):
+    def _next_pipe(self, safety_margin=0):
         for pipe in self.pipes:
-            if pipe[0] + self._pipe_width > BIRD_LEFT + self._bird_sprite_rect.width:
+            if pipe[0] + self._pipe_width + safety_margin > BIRD_LEFT + self._bird_sprite_rect.width:
                 return pipe
 
         print("no more pipes...")
