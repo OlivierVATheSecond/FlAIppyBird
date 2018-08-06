@@ -22,6 +22,7 @@ class Individual:
     def __init__(self, genome=None):
         self.genome = [random.uniform(-5, +5) for i in range(8)] if genome is None else genome
         self.died = 0
+        self.impulses = 0
 
     def cross(self, other):
         child = Individual()
@@ -32,18 +33,18 @@ class Individual:
     def mutant(self, chance):
         child = Individual(self.genome)
         if random.random() <= chance:
-            child.genome[random.randint(0, len(child.genome) -  1)] += random.uniform(-0.1, 0.1)
+            child.genome[random.randint(0, len(child.genome) -  1)] += random.uniform(-0.2, 0.2)
         return child
 
     @staticmethod
     def _normalize(value, min_val, max_val):
-        return (value - min_val) / (max_val - min_val)
+        return 2.0 * ((value - min_val) / (max_val - min_val)) - 1.0
 
     def _state(self, current_frame):
         bird_rect = current_frame.bird_rect()
         bird_center = current_frame.bird_rect().center
 
-        next_pipe = current_frame._next_pipe()
+        next_pipe = current_frame._next_pipe(20)
         lower_rect = current_frame._lower_pipe(next_pipe)
         upper_rect = current_frame._upper_pipe(next_pipe)
 
@@ -76,7 +77,7 @@ class Individual:
             s += self.genome[i] * state[i]
         return s > 0
 
-TOP = 12
+TOP = 8
 MUTATION_CHANCE = 0.01
 
 def random_pipe(width, height):
@@ -88,9 +89,11 @@ def create_frames(width, height, count, generation=None):
         EquiWorldFrame(width, height, first_pipe)) for i in range(count)]
 
 def evolve(population):
-    best = sorted(population, key=lambda i: -i.died)[0:TOP]
-    print([f.died for f in best])
-    new = [best[a].cross(best[b]) if a != b else best[a] for a in range(TOP) for b in range(TOP)]
+    best = sorted(population, key=lambda i: -i.died)[0:TOP] + random.sample(population, TOP)
+    print(best[0].genome)
+    new = [best[a].cross(best[b]) if a != b else best[a]
+        for a in range(len(best))
+        for b in range(len(best))]
     return [i.mutant(MUTATION_CHANCE) for i in new]
 
 def main():
@@ -101,16 +104,20 @@ def main():
     screen = pygame.display.set_mode(size)
 
     tick = 0
-    frames = create_frames(width, height, TOP * TOP)
+    generation = 0
+    frames = create_frames(width, height, TOP * TOP + TOP)
 
     while 1:
+        to_paint = generation % 2 == 0
+
         # handle events
         for event in pygame.event.get():
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 sys.exit()
 
         # refresh screen
-        screen.fill(background)
+        if to_paint:
+            screen.fill(background)
 
         one_alive = False
         next_pipe = random_pipe(width, height)
@@ -122,17 +129,22 @@ def main():
 
                 if not one_alive:
                     one_alive = True
-                    for pipe in current_frame.pipes:
-                        current_frame._paint_pipe(screen, current_frame._lower_pipe(pipe))
-                        current_frame._paint_pipe(screen, current_frame._upper_pipe(pipe))
+                    if to_paint:
+                        for pipe in current_frame.pipes:
+                            current_frame._paint_pipe(screen, current_frame._lower_pipe(pipe))
+                            current_frame._paint_pipe(screen, current_frame._upper_pipe(pipe))
                 
                 # AI
                 if ai.decide(current_frame):
                     current_frame.impulse()
+                    ai.impulses += 1
 
                 # step simulation
                 current_frame.tick()
-                current_frame._paint_bird(screen)
+
+                if to_paint:
+                    current_frame._paint_bird(screen)
+                
                 current_frame.set_next_pipe(next_pipe)
 
                 # check state
@@ -140,9 +152,13 @@ def main():
                     ai.died = tick
 
         tick += 1
-        pygame.display.flip()
+        if to_paint:
+            pygame.display.flip()
 
         if not one_alive:
-            frames = create_frames(width, height, TOP * TOP, evolve([a[0] for a in frames]))
+            next_generation = evolve([a[0] for a in frames])
+            frames = create_frames(width, height, len(next_generation), next_generation)
+            tick = 0
+            generation += 1
 
 main()
