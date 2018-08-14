@@ -1,11 +1,12 @@
 import sys
 import pygame
+import time
 from frame import Frame
 
 def main():
     pygame.init()
 
-    size = width, height = 2000, 1000
+    size = width, height = 1920, 1080
     background = 196, 240, 255
 
     frame = Frame(width=width, height=height)

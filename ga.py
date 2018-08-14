@@ -44,7 +44,7 @@ class Individual:
         bird_rect = current_frame.bird_rect()
         bird_center = current_frame.bird_rect().center
 
-        next_pipe = current_frame._next_pipe(20)
+        next_pipe = current_frame._next_pipe(30)
         lower_rect = current_frame._lower_pipe(next_pipe)
         upper_rect = current_frame._upper_pipe(next_pipe)
 
@@ -57,7 +57,7 @@ class Individual:
 
         return [
             1.0,
-            self._normalize(current_frame.bird_altitude, 0, current_frame.height),
+            #self._normalize(current_frame.bird_altitude, 0, current_frame.height),
             self._normalize(current_frame.bird_velocity, frame.MAX_DOWN_VELOCITY, frame.MAX_UP_VELOCITY),
             self._normalize(current_frame.impulse_ticks, 0, frame.IMPULSE_DURATION),
             self._normalize(lower_rect.left - bird_rect.right,
@@ -66,7 +66,7 @@ class Individual:
             ),
             self._normalize(bird_rect.bottom - lower_rect.top, -current_frame.height, current_frame.height),
             self._normalize(bird_rect.top - upper_rect.bottom, -current_frame.height, current_frame.height),
-            self._normalize(angle, -math.pi, math.pi)
+            0 #self._normalize(angle, -math.pi, math.pi)
         ]
 
     def decide(self, current_frame):
@@ -78,7 +78,7 @@ class Individual:
         return s > 0
 
 TOP = 8
-MUTATION_CHANCE = 0.01
+MUTATION_CHANCE = 0.09
 
 def random_pipe(width, height):
     return width, random.randint(frame.MIN_PIPE_SIZE + 200, height - frame.MIN_PIPE_SIZE)
@@ -89,8 +89,9 @@ def create_frames(width, height, count, generation=None):
         EquiWorldFrame(width, height, first_pipe)) for i in range(count)]
 
 def evolve(population):
-    best = sorted(population, key=lambda i: -i.died)[0:TOP] + random.sample(population, TOP)
-    print(best[0].genome)
+    ordered = sorted(population, key=lambda i: -i.died)
+    best = ordered[0:TOP] + random.sample(ordered[TOP:], TOP)
+    print(['{:.3}'.format(b) for b in best[0].genome])
     new = [best[a].cross(best[b]) if a != b else best[a]
         for a in range(len(best))
         for b in range(len(best))]
@@ -99,7 +100,7 @@ def evolve(population):
 def main():
     pygame.init()
 
-    size = width, height = 800, 1080
+    size = width, height = 1000, 1080
     background = 196, 240, 255
     screen = pygame.display.set_mode(size)
 
@@ -108,7 +109,7 @@ def main():
     frames = create_frames(width, height, TOP * TOP + TOP)
 
     while 1:
-        to_paint = generation % 2 == 0
+        to_paint = True #generation % 2 == 0
 
         # handle events
         for event in pygame.event.get():
@@ -129,7 +130,7 @@ def main():
 
                 if not one_alive:
                     one_alive = True
-                    if to_paint:
+                    if True: #to_paint:
                         for pipe in current_frame.pipes:
                             current_frame._paint_pipe(screen, current_frame._lower_pipe(pipe))
                             current_frame._paint_pipe(screen, current_frame._upper_pipe(pipe))
